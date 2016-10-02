@@ -25,3 +25,12 @@ uint16_t mcuSetMCUTargetTemperature(uint16_t data){
 	return 0;
 }
 
+uint16_t mcuSetLEDStatus(rpcLEDStatus_t ledStatus){
+
+	static uint16_t returnvalue = 0;
+	returnvalue++;
+
+
+	return returnvalue;
+}
+
