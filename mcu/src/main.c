@@ -65,11 +65,20 @@ const int8_t TEMPERATURE_TOLERACE = 4;
 
 //t_task_data_sys task_data_sys;
 
+#define CHANNEL_CODEC_TX_BUFFER_SIZE 64
+#define CHANNEL_CODEC_RX_BUFFER_SIZE 64
 
-void ChannelCodec_errorHandler(channelCodecErrorNum_t ErrNum){
+channel_codec_instance_t cc_instances[channel_codec_comport_COUNT];
+
+static char cc_rxBuffers[channel_codec_comport_COUNT][CHANNEL_CODEC_RX_BUFFER_SIZE];
+static char cc_txBuffers[channel_codec_comport_COUNT][CHANNEL_CODEC_TX_BUFFER_SIZE];
+
+void ChannelCodec_errorHandler(channel_codec_instance_t *instance,  channelCodecErrorNum_t ErrNum){
 	(void)ErrNum;
-	
+	(void)instance;
+
 }
+
 
 
 int main(void) __attribute__ ((noreturn));
@@ -95,12 +104,18 @@ int main(void)
 	max6675Init();
 	temperature = 40;
 	max33185result_t temperature_data;
-	channel_init();
+
+	cc_instances[channel_codec_comport_transmission].aux.port = channel_codec_comport_transmission;
+
+	channel_init_instance(&cc_instances[channel_codec_comport_transmission],
+									 cc_rxBuffers[channel_codec_comport_transmission],CHANNEL_CODEC_RX_BUFFER_SIZE,
+									 cc_txBuffers[channel_codec_comport_transmission],CHANNEL_CODEC_TX_BUFFER_SIZE);
+
 	while (1){
 		int16_t errorvalue;
 		uint8_t inByte;
 		while (xSerialGetChar(&inByte)){
-			channel_push_byte_to_RPC(inByte);
+			channel_push_byte_to_RPC(&cc_instances[channel_codec_comport_transmission],inByte);
 		}
 		timebaselo++;
 
@@ -134,7 +149,7 @@ int main(void)
 		//printc('\n');
 		//
 #if 1
-		qtUpdateRealTemperature(
+		qtUpdateMCUADCValues(
 				temperature_data.temperature_thermocuouple,
 				temperature_data.temperature_coldjunction,
 				TARGETEMP_C,errorvalue);
