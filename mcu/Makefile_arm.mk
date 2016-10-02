@@ -5,23 +5,23 @@
 OPT = 0
 
 
+MCU_UpperCase = STM32L151XE
 MCU = STM32L151xE
-
 
 HSE_VALUE=12000000
 
 SILENCE = @
-
+#SILENCE = 
 TARGETNAME = rpcFreeRTOSTemplate
 
 SRC = src
 # Libraries
 LIBRARIES = $(SRC)/libraries
 
-CMSIS = $(LIBRARIES)/STM32Cube_FW_L1_V1.5.0/Drivers/CMSIS
-HAL_DRIVER = $(LIBRARIES)/STM32Cube_FW_L1_V1.5.0/Drivers/STM32L1xx_HAL_Driver/
+CMSIS = $(LIBRARIES)/STM32Cube_FW_L1_V1.6.0/Drivers/CMSIS
+HAL_DRIVER = $(LIBRARIES)/STM32Cube_FW_L1_V1.6.0/Drivers/STM32L1xx_HAL_Driver
 
-FREERTOSDIR = $(LIBRARIES)/FreeRTOSV8.2.1
+FREERTOSDIR = $(LIBRARIES)/FreeRTOSv9.0.0
 
 
 # Define all C source files (dependencies are generated automatically)
@@ -144,6 +144,7 @@ CFLAGS += -mthumb
 CFLAGS += -O$(OPT) 
 CFLAGS += -std=gnu99
 CFLAGS += -gdwarf-2
+CFLAGS += -fshort-wchar
 CFLAGS += -ffunction-sections
 CFLAGS += -fdata-sections
 CFLAGS += -Wall
@@ -154,6 +155,7 @@ CFLAGS += -Wno-unknown-pragmas
 #CFLAGS += -flto
 CFLAGS += -Wextra
 CFLAGS += -Wpedantic
+#CFLAGS += --no-wchar-size-warning
 #CFLAGS += -Wpointer-arith
 #CFLAGS += -Wstrict-prototypes
 #CFLAGS += -Winline
@@ -191,15 +193,58 @@ ASFLAGS = -Wa,-adhlns=$(OBJDIR)/$(*D)/$(*F).lst
 LDFLAGS += -lm
 LDFLAGS += --specs=nano.specs
 LDFLAGS += -Wl,-Map=$(TARGET).map,--cref
-LDFLAGS += -Wl,--gc-sections
-LDFLAGS += -T$(CMSIS)/Device/ST/STM32L1xx/Source/Templates/gcc/linker/$(MCU)_FLASH.ld
+LDFLAGS += -Wl,--gc-sections 
+LDFLAGS += -Wl,--no-wchar-size-warning
+LDFLAGS += -T$(CMSIS)/Device/ST/STM32L1xx/Source/Templates/gcc/linker/$(MCU_UpperCase)_FLASH.ld
 
 #============================================================================
 
 
 # Define programs and commands
-#TOOLCHAIN = arm-none-eabi
-TOOLCHAIN = C:/arm/gcc-4.9.3-20150609/bin/arm-none-eabi-
+#http://stackoverflow.com/questions/714100/os-detecting-makefile
+ifeq ($(OS),Windows_NT)
+    TOOLCHAIN = C:/arm/gcc-4.9.3-20150609/bin/arm-none-eabi-
+    SH = "C:\Program Files (x86)\Git\usr\bin\sh.exe"
+	MKDIR =  "C:\Program Files (x86)\Git\usr\bin\mkdir.exe"
+	TAIL =  "C:\Program Files (x86)\Git\usr\bin\tail.exe"
+	GITVERS = "git_win.sh"
+    #CCFLAGS += -D WIN32
+    ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
+        #CCFLAGS += -D AMD64
+    else
+        ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+            #CCFLAGS += -D AMD64
+        endif
+        ifeq ($(PROCESSOR_ARCHITECTURE),x86)
+            #CCFLAGS += -D IA32
+        endif
+    endif
+else
+    UNAME_S := $(shell uname -s)
+    TOOLCHAIN = arm-none-eabi-
+    SH = "sh"
+	MKDIR =  "mkdir"
+	TAIL =  "tail"
+	GITVERS = "git_linux.sh"
+    ifeq ($(UNAME_S),Linux)
+        #CCFLAGS += -D LINUX
+    endif
+    ifeq ($(UNAME_S),Darwin)
+        #CCFLAGS += -D OSX
+    endif
+    UNAME_P := $(shell uname -p)
+    ifeq ($(UNAME_P),x86_64)
+        #CCFLAGS += -D AMD64
+    endif
+    ifneq ($(filter %86,$(UNAME_P)),)
+        #CCFLAGS += -D IA32
+    endif
+    ifneq ($(filter arm%,$(UNAME_P)),)
+        #CCFLAGS += -D ARM
+    endif
+endif
+
+
 
 CC        = $(TOOLCHAIN)gcc
 OBJCOPY   = $(TOOLCHAIN)objcopy
@@ -213,9 +258,8 @@ OPENOCD   = openocd
 DOXYGEN   = doxygen
 STLINK    = st-flash
 
-SH = "C:\Program Files (x86)\Git\usr\bin\sh.exe"
-MKDIR =  "C:\Program Files (x86)\Git\usr\bin\mkdir.exe"
-TAIL =  "C:\Program Files (x86)\Git\usr\bin\tail.exe"
+
+
 
 ifeq (AMD64, $(PROCESSOR_ARCHITEW6432))
   SUBWCREV = tools/SubWCRev64.exe
@@ -297,7 +341,7 @@ clean:
 
 writegitversion:
 	@echo writing vc.h..
-	$(SILENCE)$(SH) git.sh 
+	$(SILENCE)$(SH) $(GITVERS)
 	
 # Link: create ELF output file from object files
 .SECONDARY: $(TARGET).elf
@@ -305,7 +349,7 @@ writegitversion:
 $(TARGET).elf: $(OBJECTS)
 #	@echo
 	@echo Linking: $@
-	$(SILENCE)$(CC) $^ $(LDFLAGS) --output $@ 
+	$(SILENCE)$(CC) $^ $(LDFLAGS)  --output $@ 
 
 
 # Create final output files (.hex, .eep) from ELF output file.
@@ -328,7 +372,7 @@ $(OBJDIR)/%.o : %.c
 	@echo Compiling C: $<
 #echo $(DEPENDS)
 	$(SILENCE)$(MKDIR) -p $(@D)
-	$(SILENCE)$(CC) -c $(CPPFLAGS) $(CFLAGS) $(GENDEPFLAGS) $< -o $@ 
+	$(SILENCE)$(CC)  -c $(CPPFLAGS) $(CFLAGS) $(GENDEPFLAGS) $< -o $@ 
 
 
 # Compile: create object files from C++ source files
@@ -336,7 +380,7 @@ $(OBJDIR)/%.o : %.cpp
 #	@echo
 	@echo Compiling CPP: $<
 	$(SILENCE)$(MKDIR) -p $(@D)
-	$(SILENCE)$(CC) -c $(CPPFLAGS) $(CXXFLAGS) $(GENDEPFLAGS) $< -o $@ 
+	$(SILENCE)$(CC)  -c $(CPPFLAGS) $(CXXFLAGS) $(GENDEPFLAGS) $< -o $@ 
 
 
 # Assemble: create object files from assembler source files
@@ -344,7 +388,7 @@ $(OBJDIR)/%.o : %.s
 #	@echo 
 	@echo Assembling: $<
 	$(SILENCE)$(MKDIR) -p $(@D)
-	$(SILENCE)$(CC) -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
+	$(SILENCE)$(CC)  -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
 
 # Include the dependency files
 -include $(DEPENDS)
