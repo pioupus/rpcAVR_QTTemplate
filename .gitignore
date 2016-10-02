@@ -30,10 +30,8 @@
 moc_*.cpp
 qrc_*.cpp
 ui_*.h
-<<<<<<< HEAD
-=======
 qt/*Makefile*
->>>>>>> 9d4d84b0d066a53d794d3966311c1954a2679506
+
 *build-*
 
 # QtCreator
@@ -107,6 +105,7 @@ qt/project/libs/rpc/src/client/generated_app/
 qt/project/libs/rpc/include/rpc_transmission/server/generated_general/
 qt/project/libs/rpc/include/rpc_transmission/client/
 
+mcu/buildavr/*
 mcu/modules/rpc/doc
 mcu/modules/rpc/src/server/generated_app/
 mcu/modules/rpc/src/client/generated_app/
