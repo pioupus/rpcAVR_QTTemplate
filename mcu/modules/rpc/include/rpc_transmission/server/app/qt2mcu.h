@@ -11,6 +11,7 @@ typedef enum {rpcLEDStatus_none,rpcLEDStatus_off,rpcLEDStatus_on} rpcLEDStatus_t
 	void mcuSendDataNoAnswer(uint8_t data);
 	
 uint16_t mcuSetLEDStatus(rpcLEDStatus_t ledStatus);
+uint16_t mcuSetMCUTargetTemperature(uint16_t data);
 
 #ifdef __cplusplus
 }
