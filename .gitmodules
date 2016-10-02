@@ -4,3 +4,6 @@
 [submodule "qt"]
 	path = qt
 	url = https://github.com/pioupus/rpcQtTemplate.git
+[submodule "mcu/libs/RPC-ChannelCodec"]
+	path = mcu/libs/RPC-ChannelCodec
+	url = https://github.com/pioupus/RPC-ChannelCodec.git
